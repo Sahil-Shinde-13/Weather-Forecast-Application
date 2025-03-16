@@ -25,8 +25,9 @@ async function fetchWeather(city){
         const data = await response.json();
         console.log(data);
         displayCurrentWeather(data);
+        fetchExtendedForecast(city);
     }catch(error){
-        console.log(error);
+        currentWeatherDiv.innerHTML = `<p class='text-red-500'>${error.message}</p>`;
 
     }finally {
         // Re-enable button after fetching data
@@ -44,6 +45,31 @@ function displayCurrentWeather(data){
     <p>Wind Speed: ${data.wind.speed} m/s</p>
     <p>Description: ${data.weather[0].description}</p>
     `;
+}
+
+//Fetch extended weather forecast
+async function fetchExtendedForecast(city) {
+    try {
+      const response = await fetch(`${FORECAST_URL}?q=${city}&appid=${API_KEY}&units=metric`);
+      if (!response.ok) throw new Error("Failed to fetch forecast");
+      const data = await response.json();
+      displayExtendedForecast(data);
+    } catch (error) {
+      extendedForecastDiv.innerHTML = `<p class='text-red-500'>${error.message}</p>`;
+    }
+  }
+
+//Display extended forecast
+function displayExtendedForecast(data){
+    const dailyData = data.list.filter((_, index) => index % 8 === 0); // Get daily data from 3-hour interval forecast
+    extendedForecastDiv.innerHTML = dailyData.map(day => `
+      <div class="p-4 border rounded shadow bg-green-500">
+        <h3>${new Date(day.dt_txt).toLocaleDateString()}</h3>
+        <p>Temp: ${day.main.temp} °C</p>
+        <p>Wind: ${day.wind.speed} m/s</p>
+        <p>Humidity: ${day.main.humidity}%</p>
+      </div>
+    `).join("");
 }
 
 //Event Listeners 
