@@ -8,7 +8,37 @@ const extendedForecastDiv = document.getElementById("extended-forecast");
 //API configuration
 const BASE_URL = "https://api.openweathermap.org/data/2.5/weather"; // Base URL for current weather data
 const FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast"; // URL for extended forecast
-const API_KEY = API_Key;
+const API_Key = API_KEY;
+
+// DropDown list for recent searches 
+const recentSearchesDropdown = document.createElement("select");
+recentSearchesDropdown.className = "mt-2 p-2 border";
+document.querySelector('#weather-app').prepend(recentSearchesDropdown);
+recentSearchesDropdown.style.display = "none";
+
+//save recent city searches to local storage
+function saveRecentSearch(city) {
+  let cities = JSON.parse(localStorage.getItem("recentCities")) || [];
+  if (!cities.includes(city)) {
+    cities.unshift(city);
+    if (cities.length > 5) cities.pop(); // Keep only the last 5 searches
+    localStorage.setItem("recentCities", JSON.stringify(cities));
+  }
+  updateRecentSearches();
+}
+
+// Update the dropdown with recent searches
+function updateRecentSearches() {
+  let cities = JSON.parse(localStorage.getItem("recentCities")) || [];
+  recentSearchesDropdown.innerHTML = "<option>Select Recent City</option>";
+  cities.forEach(city => {
+    let option = document.createElement("option");
+    option.value = city;
+    option.textContent = city;
+    recentSearchesDropdown.appendChild(option);
+  });
+  recentSearchesDropdown.style.display = cities.length ? "block" : "none";
+}
 
 
 //Fetching weather data for a given city
@@ -20,11 +50,12 @@ async function fetchWeather(city){
         currentWeatherDiv.innerHTML = `<p class='text-blue-500'>Loading...</p>`;
         searchBtn.disabled = true;
 
-        const response = await fetch(`${BASE_URL}?q=${city}&appid=${API_KEY}&units=metric`);
+        const response = await fetch(`${BASE_URL}?q=${city}&appid=${API_Key}&units=metric`);
         if (!response.ok) throw new Error("City not found");
         const data = await response.json();
         displayCurrentWeather(data);
         fetchExtendedForecast(city);
+        saveRecentSearch(city);
     }catch(error){
         currentWeatherDiv.innerHTML = `<p class='text-red-500'>${error.message}</p>`;
 
@@ -40,7 +71,7 @@ function displayCurrentWeather(data){
   const iconCode = data.weather[0].icon;
   const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
     currentWeatherDiv.innerHTML = `
-    <div class="flex flex-col items-center text-center p-4">
+    <div class="flex flex-col items-center text-center p-4 bg-blue-500 text-white">
     <h2 class="text-xl font-bold">${data.name}</h2>
     <img src="${iconUrl}" alt="${data.weather[0].description}" class="w-20 h-20">
     <p>Temperature: ${data.main.temp} °C</p>
@@ -54,10 +85,9 @@ function displayCurrentWeather(data){
 //Fetch extended weather forecast
 async function fetchExtendedForecast(city) {
     try {
-      const response = await fetch(`${FORECAST_URL}?q=${city}&appid=${API_KEY}&units=metric`);
+      const response = await fetch(`${FORECAST_URL}?q=${city}&appid=${API_Key}&units=metric`);
       if (!response.ok) throw new Error("Failed to fetch forecast");
       const data = await response.json();
-      console.log(data);
       displayExtendedForecast(data);
     } catch (error) {
       extendedForecastDiv.innerHTML = `<p class='text-red-500'>${error.message}</p>`;
@@ -86,7 +116,7 @@ function displayExtendedForecast(data){
 
 //Fetch weather by current location
 function fetchWeatherLocation(lat,lon){
-  fetch(`${BASE_URL}?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`)
+  fetch(`${BASE_URL}?lat=${lat}&lon=${lon}&appid=${API_Key}&units=metric`)
   .then(response => response.json())
   .then(data =>{
     displayCurrentWeather(data);
@@ -99,7 +129,7 @@ function fetchWeatherLocation(lat,lon){
 
 //Event Listeners 
 searchBtn.addEventListener("click", ()=> fetchWeather(cityInput.value.trim()));
-
+recentSearchesDropdown.addEventListener("change", () => fetchWeather(recentSearchesDropdown.value));
 locationBtn.addEventListener("click", () =>{
   navigator.geolocation.getCurrentPosition(
     position => fetchWeatherLocation(position.coords.latitude, position.coords.longitude),
@@ -109,3 +139,5 @@ locationBtn.addEventListener("click", () =>{
     }
   );
 });
+
+updateRecentSearches();
