@@ -83,5 +83,29 @@ function displayExtendedForecast(data){
     }).join("");
 }
 
+
+//Fetch weather by current location
+function fetchWeatherLocation(lat,lon){
+  fetch(`${BASE_URL}?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`)
+  .then(response => response.json())
+  .then(data =>{
+    displayCurrentWeather(data);
+    fetchExtendedForecast(data.name);
+  })
+  .catch(error =>{
+    currentWeatherDiv.innerHTML = `<p class='text-red-500'>Error: ${error.message}</p>`
+  })
+};
+
 //Event Listeners 
 searchBtn.addEventListener("click", ()=> fetchWeather(cityInput.value.trim()));
+
+locationBtn.addEventListener("click", () =>{
+  navigator.geolocation.getCurrentPosition(
+    position => fetchWeatherLocation(position.coords.latitude, position.coords.longitude),
+    error =>{
+      let messages = ["Location access denied.", "Location unavailable.", "Location request time out."];
+      currentWeatherDiv.innerHTML = `<p class='text-red-500'>${messages[error.code - 1] || "Unable to retrieve location."}</p>`;
+    }
+  );
+});
